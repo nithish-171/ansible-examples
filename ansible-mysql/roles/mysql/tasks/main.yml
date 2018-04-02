@@ -1,0 +1,66 @@
+---
+# tasks file for mysql
+- name: Install
+  apt: pkg={{ item }} state=present
+  with_items:
+    - mysql-server
+    - mysql-client
+    - python-mysqldb
+  notify: restart mysql
+
+#- name: Configuration file my.cnf
+#  template: src=etc--mysql--my.cnf.j2 dest=/etc/mysql/my.cnf
+#  notify: restart mysql
+
+- name: Set the root password.
+  mysql_user: name=root password="{{ mysql_root_password }}" host="localhost"
+  ignore_errors: yes
+
+#- name: Configuration file, .my.cnf
+#  template: src=root--my.cnf.j2 dest=/root/.my.cnf
+
+#- name: Delete anonymous MySQL server user for {{ inventory_hostname }}
+#  mysql_user: user="" host="{{ inventory_hostname }}" state="absent" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Secure the MySQL root user for IPV6 localhost (::1)
+  mysql_user: user="root" password="{{ mysql_root_password }}" host="::1" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Secure the MySQL root user for IPV4 localhost (127.0.0.1)
+  mysql_user: user="root" password="{{ mysql_root_password }}" host="127.0.0.1" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Secure the MySQL root user for localhost domain (localhost)
+  mysql_user: user="root" password="{{ mysql_root_password }}" host="localhost" login_user="root" login_password="{{ mysql_root_password }}"
+
+#- name: Secure the MySQL root user for {{ inventory_hostname }} domain
+#  mysql_user: user="root" password="{{ mysql_root_password }}" host="{{ inventory_hostname }}" login_user="root" login_password="{{ mysql_root_password }}"
+
+- name: Remove the MySQL test database
+  mysql_db: db=test state=absent login_user="root" login_password="{{ mysql_root_password }}"
+
+#- name: create a new database with name 'testing'
+#  mysql_db: name=testing state=present login_user="root" login_password="{{ mysql_root_password }}"
+  
+#- name: import database secheme similar to mysql
+#  mysql_db: name=mysql login_user="root" login_password="{{ mysql_root_password }}" state=import  target=sakila-schema.sql
+
+#- name: Import databases to hostname.sql
+#  mysql_db: name=mysql login_user="root" login_password="{{ mysql_root_password }}" state=import target=sakila-data.sql
+
+- name: copy dbs
+  copy:
+    src: "{{ item }}" 
+    dest: /tmp
+  with_items:
+    - mysql-schema.sql
+    - mysql-data.sql
+
+- name: Import Databases
+  mysql_db:
+    name: mysql
+    state: import
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    target: /tmp/{{ item }}
+  with_items:
+    - mysql-schema.sql
+    - mysql-data.sql
